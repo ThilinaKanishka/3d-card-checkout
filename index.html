@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>3D Smart Card Checkout</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='7' width='28' height='18' rx='3' fill='%238b5cf6'/%3E%3Crect x='2' y='11' width='28' height='4' fill='%231e1b4b'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+    <!-- Decorative background glow -->
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+      <div class="absolute -top-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-indigo-600/25 blur-3xl"></div>
+      <div class="absolute -right-32 -bottom-40 h-[30rem] w-[30rem] rounded-full bg-fuchsia-600/20 blur-3xl"></div>
+    </div>
+
+    <main class="flex min-h-screen items-center justify-center px-4 py-10">
+      <section
+        class="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/50 backdrop-blur-xl lg:grid-cols-2"
+      >
+        <!-- ───────────── Left: card preview ───────────── -->
+        <div
+          class="flex flex-col items-center justify-center gap-6 border-b border-white/10 bg-gradient-to-br from-white/[0.06] to-transparent p-6 sm:p-10 lg:border-r lg:border-b-0"
+        >
+          <div class="card-scene">
+            <div id="card" class="card" data-brand="unknown">
+              <!-- Front -->
+              <div class="card-face card-front">
+                <div class="card-shine" aria-hidden="true"></div>
+
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="card-chip" aria-hidden="true"></div>
+                    <svg class="card-contactless" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M8.5 8.5a5 5 0 0 1 0 7M12 6a8.5 8.5 0 0 1 0 12M15.5 3.5a12 12 0 0 1 0 17" />
+                    </svg>
+                  </div>
+                  <div id="card-brand-front" class="card-brand"></div>
+                </div>
+
+                <div id="card-region-number" class="card-region card-number-region">
+                  <span id="card-number-display" class="card-number">#### #### #### ####</span>
+                </div>
+
+                <div class="flex items-end justify-between gap-3">
+                  <div id="card-region-holder" class="card-region min-w-0 flex-1">
+                    <span class="card-label">Card Holder</span>
+                    <span id="card-holder-display" class="card-value truncate">FULL NAME</span>
+                  </div>
+                  <div id="card-region-expiry" class="card-region shrink-0">
+                    <span class="card-label">Expires</span>
+                    <span id="card-expiry-display" class="card-value">MM/YY</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Back -->
+              <div class="card-face card-back">
+                <div class="card-stripe" aria-hidden="true"></div>
+                <div class="card-back-body">
+                  <span class="card-label text-right">CVV</span>
+                  <div class="card-signature">
+                    <span id="card-cvv-display" class="card-cvv"></span>
+                  </div>
+                </div>
+                <div class="card-back-footer">
+                  <p class="card-fineprint">
+                    This card is a UI demo. No real payment information is processed or stored.
+                  </p>
+                  <div id="card-brand-back" class="card-brand"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-center text-xs text-slate-400">
+            Tip: focus the CVV field to flip the card.
+          </p>
+        </div>
+
+        <!-- ───────────── Right: payment form ───────────── -->
+        <div class="relative p-6 sm:p-10">
+          <form id="payment-form" class="flex flex-col gap-5" novalidate>
+            <header>
+              <h1 class="text-2xl font-semibold tracking-tight">Complete Payment</h1>
+              <p class="mt-1 text-sm text-slate-400">Enter your card details to finish checkout.</p>
+            </header>
+
+            <!-- Card number -->
+            <div>
+              <label for="card-number" class="field-label">Card Number</label>
+              <div class="relative">
+                <input
+                  id="card-number"
+                  name="cardNumber"
+                  class="field-input pr-28 font-mono tracking-wider"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="cc-number"
+                  placeholder="1234 5678 9012 3456"
+                  aria-describedby="card-number-error"
+                />
+                <span
+                  id="card-brand-badge"
+                  class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-md bg-white/10 px-2 py-0.5 text-xs font-medium text-slate-300 opacity-0 transition-opacity"
+                ></span>
+              </div>
+              <p id="card-number-error" class="field-error" aria-live="polite"></p>
+            </div>
+
+            <!-- Card holder -->
+            <div>
+              <label for="card-holder" class="field-label">Card Holder</label>
+              <input
+                id="card-holder"
+                name="cardHolder"
+                class="field-input"
+                type="text"
+                maxlength="26"
+                autocomplete="cc-name"
+                placeholder="Full name"
+                aria-describedby="card-holder-error"
+              />
+              <p id="card-holder-error" class="field-error" aria-live="polite"></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Expiry -->
+              <div>
+                <label for="card-expiry" class="field-label">Expiry (MM/YY)</label>
+                <input
+                  id="card-expiry"
+                  name="cardExpiry"
+                  class="field-input font-mono"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="5"
+                  autocomplete="cc-exp"
+                  placeholder="MM/YY"
+                  aria-describedby="card-expiry-error"
+                />
+                <p id="card-expiry-error" class="field-error" aria-live="polite"></p>
+              </div>
+
+              <!-- CVV -->
+              <div>
+                <label for="card-cvv" class="field-label">CVV</label>
+                <input
+                  id="card-cvv"
+                  name="cardCvv"
+                  class="field-input font-mono"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="cc-csc"
+                  placeholder="123"
+                  aria-describedby="card-cvv-error"
+                />
+                <p id="card-cvv-error" class="field-error" aria-live="polite"></p>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-white/10 pt-5 text-sm">
+              <span class="text-slate-400">Total due</span>
+              <span class="text-lg font-semibold">$129.00</span>
+            </div>
+
+            <button
+              id="pay-button"
+              type="submit"
+              class="group relative flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 font-semibold text-white shadow-lg shadow-purple-900/40 transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus-visible:outline-none active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:brightness-100"
+              disabled
+            >
+              <span id="pay-spinner" class="hidden size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+              <span id="pay-label">Pay Now</span>
+            </button>
+
+            <p class="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+              <svg viewBox="0 0 24 24" class="size-3.5 fill-current" aria-hidden="true">
+                <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3H9z" />
+              </svg>
+              Demo only — no real payment is made.
+            </p>
+          </form>
+
+          <!-- Success state (shown after "Pay Now") -->
+          <div
+            id="success-panel"
+            class="absolute inset-0 hidden flex-col items-center justify-center gap-4 p-6 text-center sm:p-10"
+            role="status"
+          >
+            <div class="success-check flex size-16 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/40">
+              <svg viewBox="0 0 24 24" class="size-8 fill-none stroke-emerald-400 stroke-[2.5]" aria-hidden="true">
+                <path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-semibold">Payment successful</h2>
+            <p id="success-message" class="max-w-xs text-sm text-slate-400"></p>
+            <button
+              id="reset-button"
+              type="button"
+              class="mt-2 rounded-xl border border-white/15 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:outline-none"
+            >
+              Make another payment
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
