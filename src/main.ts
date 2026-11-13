@@ -2,7 +2,7 @@
  * Wires the checkout form to the live 3D card preview.
  */
 
-import './style.css';
+import './style.css'; // also pulls in card.css
 import { detectCardType, getCardTypeInfo } from './cardType';
 import type { CardBrand, CardTypeInfo } from './cardType';
 import {
@@ -15,7 +15,8 @@ import {
 } from './format';
 import { validateCardNumber, validateCvv, validateExpiry, validateHolder } from './validate';
 import type { ValidationResult } from './validate';
-import { getBrandLogo } from './logos';
+import { getBrandBadge } from './badge';
+import { attachTilt } from './tilt';
 
 type FieldName = 'number' | 'holder' | 'expiry' | 'cvv';
 
@@ -37,6 +38,7 @@ const successPanel = getEl<HTMLDivElement>('success-panel');
 const successMessage = getEl<HTMLParagraphElement>('success-message');
 const resetButton = getEl<HTMLButtonElement>('reset-button');
 
+const cardScene = getEl<HTMLDivElement>('card-scene');
 const card = getEl<HTMLDivElement>('card');
 const cardBrandFront = getEl<HTMLDivElement>('card-brand-front');
 const cardBrandBack = getEl<HTMLDivElement>('card-brand-back');
@@ -132,14 +134,14 @@ function renderValidation(): void {
 
 // ───────────────────────── Card preview ─────────────────────────
 
-/** Updates the brand-dependent parts of the card (gradient, logos, badge). */
+/** Updates the brand-dependent parts of the card (theme, badges, input badge). */
 function renderBrand(): void {
   if (card.dataset.brand === currentBrand) return;
 
   card.dataset.brand = currentBrand;
-  const logo = getBrandLogo(currentBrand);
-  cardBrandFront.innerHTML = logo;
-  cardBrandBack.innerHTML = logo;
+  const badge = getBrandBadge(currentBrand);
+  cardBrandFront.innerHTML = badge;
+  cardBrandBack.innerHTML = badge;
 
   const known = currentBrand !== 'unknown';
   brandBadge.textContent = known ? cardInfo().label : '';
@@ -285,3 +287,4 @@ resetButton.addEventListener('click', () => {
 
 // Initial paint.
 render();
+attachTilt(cardScene, { maxTilt: 12 });
