@@ -3,6 +3,7 @@
  */
 
 import type { CardTypeInfo } from './cardType';
+import { getPasswordStrength } from './passwordStrength';
 
 export type ValidationResult = string | null;
 
@@ -74,5 +75,38 @@ export function validateExpiry(value: string, now: Date = new Date()): Validatio
 export function validateCvv(cvv: string, info: CardTypeInfo): ValidationResult {
   if (cvv.length === 0) return 'CVV is required.';
   if (cvv.length !== info.cvvLength) return `CVV must be ${info.cvvLength} digits.`;
+  return null;
+}
+
+// ───────────────────────── Account fields ─────────────────────────
+
+/** Basic shape check: something@domain.tld */
+export function validateEmail(email: string): ValidationResult {
+  const value = email.trim();
+  if (value.length === 0) return 'Email is required.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) return 'Enter a valid email address.';
+  return null;
+}
+
+/** Full name must contain at least two letters. */
+export function validateFullName(name: string): ValidationResult {
+  const value = name.trim();
+  if (value.length === 0) return 'Full name is required.';
+  if (value.replace(/[^\p{L}]/gu, '').length < 2) return 'Enter your full name.';
+  return null;
+}
+
+/** New passwords need 8+ characters and a "strong" score (3 of the 4 checks). */
+export function validateNewPassword(password: string): ValidationResult {
+  if (password.length === 0) return 'Password is required.';
+  if (password.length < 8) return 'Use at least 8 characters.';
+  if (getPasswordStrength(password).level < 3) return 'Add an uppercase letter, number or symbol.';
+  return null;
+}
+
+/** Confirmation must match the password exactly. */
+export function validatePasswordConfirm(password: string, confirm: string): ValidationResult {
+  if (confirm.length === 0) return 'Please confirm your password.';
+  if (confirm !== password) return 'Passwords do not match.';
   return null;
 }

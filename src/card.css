@@ -324,21 +324,265 @@
   }
 }
 
+/* ───────────────────────── Auth scene ───────────────────────── */
+
+/* The scene receives --rx/--ry/--gx/--gy/--glare from tilt.ts; every card inherits them. */
+.auth-scene {
+  perspective: 1400px;
+}
+
+/* Faint dot grid that fades out toward the edges. */
+.auth-grid {
+  background-image: radial-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 70%);
+}
+
+/* Soft gradient blobs drifting in the background. */
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  animation: blob-drift var(--blob-duration, 18s) ease-in-out infinite alternate;
+}
+@keyframes blob-drift {
+  50% {
+    transform: translate(var(--blob-x, 40px), var(--blob-y, -30px)) scale(1.15);
+  }
+  100% {
+    transform: translate(calc(var(--blob-x, 40px) * -0.6), calc(var(--blob-y, -30px) * -0.8)) scale(0.92);
+  }
+}
+
+/*
+ * Floating card wrapper. `transform` carries the float/rotate animation,
+ * while the separate `translate` property adds mouse parallax scaled by
+ * --depth, so the two never overwrite each other.
+ */
+.float-card {
+  position: absolute;
+  transform-style: preserve-3d;
+  translate: calc(var(--ry, 0) * var(--depth, 1) * 1.6px) calc(var(--rx, 0) * var(--depth, 1) * -1.6px);
+  transform: rotateX(8deg) rotateY(var(--spin-from, -12deg)) rotateZ(var(--rz, 0deg));
+  animation: card-float var(--float-duration, 12s) ease-in-out var(--float-delay, 0s) infinite;
+}
+.float-card[data-depth="far"] {
+  filter: blur(1.2px) saturate(0.85) brightness(0.75);
+}
+@keyframes card-float {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(10deg) rotateY(var(--spin-from, -12deg)) rotateZ(var(--rz, 0deg));
+  }
+  50% {
+    transform: translateY(var(--float-y, -22px)) rotateX(-6deg) rotateY(var(--spin-to, 10deg))
+      rotateZ(calc(var(--rz, 0deg) * 0.4));
+  }
+}
+
+/* ───────────────────────── Auth panel flip ───────────────────────── */
+
+/* Same flip style as the card's CVV flip: front = Login, back = Sign Up. */
+.auth-flip {
+  perspective: 1800px;
+}
+
+.auth-panel {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.auth-panel.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* Both faces share one grid cell, so the panel is as tall as the taller face. */
+.auth-face {
+  position: relative;
+  grid-area: 1 / 1;
+  align-self: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(1px);
+}
+
+.auth-face-back {
+  transform: rotateY(180deg) translateZ(1px);
+}
+
+/* ───────────────────────── Logout: mini card + wallet ───────────────────────── */
+
+/*
+ * Stage layers paint in DOM order: wallet back → card → pocket → flap.
+ * Tailwind's -translate-x-1/2 uses the `translate` property, so the
+ * `transform`s below compose with it instead of replacing it.
+ */
+.wallet-stage {
+  perspective: 700px;
+}
+
+/* Layer order: the open flap sits behind the card; it moves in front as it closes. */
+.wallet-back,
+.wallet-flap-hinge {
+  z-index: 1;
+}
+.mini-card-slot {
+  z-index: 2;
+}
+.wallet-pocket {
+  z-index: 3;
+}
+.wallet-stage[data-phase="close"] .wallet-flap-hinge {
+  z-index: 4;
+}
+.wallet-stage [data-part="particles"] {
+  z-index: 5;
+}
+
+/* Gentle idle float of the mini card. */
+.mini-card-float {
+  animation: mini-card-float 5s ease-in-out infinite;
+}
+@keyframes mini-card-float {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(12deg) rotateY(-14deg) rotateZ(-3deg);
+  }
+  50% {
+    transform: translateY(-7px) rotateX(4deg) rotateY(10deg) rotateZ(2deg);
+  }
+}
+
+/* Card slides down (and shrinks slightly) into the pocket. */
+.mini-card-slot {
+  transform-origin: top center;
+  transition: transform 0.65s cubic-bezier(0.55, 0, 0.3, 1);
+}
+.wallet-stage:is([data-phase="insert"], [data-phase="close"]) .mini-card-slot {
+  transform: translateY(78px) scale(0.9);
+}
+.wallet-stage[data-phase] .mini-card-float {
+  animation-play-state: paused;
+}
+
+/* Wallet: hidden until the exit sequence starts, then rises into view. */
+.wallet-part {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.wallet-stage[data-phase] .wallet-part {
+  opacity: 1;
+  transform: none;
+}
+
+.wallet-back {
+  background: linear-gradient(165deg, #3f2d63 0%, #241940 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 18px 30px -10px rgb(0 0 0 / 0.7);
+}
+
+.wallet-pocket {
+  background: linear-gradient(170deg, #5a3f8a 0%, #33235a 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 -6px 12px -6px rgb(0 0 0 / 0.5);
+}
+
+/* Dashed stitching along the pocket and flap edges. */
+.wallet-pocket::after,
+.wallet-flap::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1.5px dashed rgb(255 255 255 / 0.2);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.wallet-flap-hinge {
+  perspective: 500px;
+}
+
+/* Open: folded up behind the top edge. Closed: hangs down over the pocket. */
+.wallet-flap {
+  transform-origin: top center;
+  transform: rotateX(180deg);
+  background: linear-gradient(180deg, #4a3474 0%, #2d1f50 100%);
+  box-shadow: 0 8px 14px -6px rgb(0 0 0 / 0.6);
+  transition: transform 0.45s cubic-bezier(0.5, 0, 0.2, 1.25);
+}
+.wallet-stage[data-phase="close"] .wallet-flap {
+  transform: rotateX(0deg);
+}
+
+.wallet-clasp {
+  background: radial-gradient(circle at 35% 30%, #fff3c4, #e0b44f 55%, #8a6420);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.5),
+    0 0 0 2px rgb(0 0 0 / 0.15);
+}
+
+/* Particle burst from the clasp. */
+.particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--size, 6px);
+  height: var(--size, 6px);
+  border-radius: 9999px;
+  background: var(--color, #a855f7);
+  box-shadow:
+    0 0 6px var(--color, #a855f7),
+    0 0 14px var(--color, #a855f7);
+  animation: particle-burst 0.8s cubic-bezier(0.15, 0.8, 0.3, 1) forwards;
+}
+@keyframes particle-burst {
+  from {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  65% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.3);
+    opacity: 0;
+  }
+}
+
 /* ───────────────────────── Reduced motion ───────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  /* Tilt is disabled in tilt.ts; also drop the variable-driven transform. */
+  /* Tilt is disabled in tilt.ts; also drop the variable-driven transforms. */
   .card-tilt,
   .card-ground {
     transform: none;
   }
+  .float-card {
+    translate: none;
+  }
   .card,
-  .card-region {
+  .card-region,
+  .auth-panel {
     transition: none;
   }
   .card-holo,
   .card-holo::after,
-  .brand-badge {
+  .brand-badge,
+  .float-card,
+  .blob,
+  .mini-card-float,
+  .particle {
     animation: none;
+  }
+  .mini-card-slot,
+  .wallet-part,
+  .wallet-flap {
+    transition: none;
   }
 }

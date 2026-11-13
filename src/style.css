@@ -10,6 +10,7 @@
 /* ───────────────────────── Form controls ───────────────────────── */
 
 @layer components {
+  /* Checkout fields (static label above the input). */
   .field-label {
     @apply mb-1.5 block text-sm font-medium text-slate-300;
   }
@@ -21,11 +22,227 @@
   }
 
   .field-error {
-    @apply mt-1.5 min-h-4 text-xs text-rose-400;
+    @apply mt-1.5 min-h-4 px-1 text-xs text-rose-400;
+  }
+
+  /* Auth glass panel (no backdrop-filter: it misbehaves inside 3D transforms). */
+  .glass-panel {
+    @apply rounded-3xl border border-white/10 bg-linear-to-b from-slate-900/90 to-slate-950/90 p-6 shadow-2xl shadow-black/60 sm:p-9;
+  }
+
+  /* Auth fields: floating label inside the input. */
+  .auth-field {
+    @apply relative isolate rounded-xl;
+  }
+
+  .auth-input {
+    @apply h-14 w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 pt-5 pb-1 text-[0.95rem] text-slate-100 transition outline-none;
+    @apply data-invalid:border-rose-500/70;
+  }
+
+  .auth-label {
+    @apply pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[0.95rem] text-slate-400 transition-all duration-200;
+  }
+
+  .auth-checkbox {
+    @apply size-4 shrink-0 cursor-pointer rounded accent-purple-500;
+  }
+
+  .auth-link {
+    @apply rounded font-medium text-purple-300 underline-offset-4 transition hover:text-purple-200 hover:underline focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:outline-none;
   }
 }
 
-/* Success check pop-in */
+/* Label floats up when the input is focused or filled. */
+.auth-input:focus + .auth-label,
+.auth-input:not(:placeholder-shown) + .auth-label {
+  top: 0.95rem;
+  font-size: 0.72rem;
+  color: var(--color-slate-300);
+}
+.auth-input:-webkit-autofill + .auth-label {
+  top: 0.95rem;
+  font-size: 0.72rem;
+}
+.auth-input:focus + .auth-label {
+  color: var(--color-purple-200);
+}
+.auth-input[data-invalid] + .auth-label {
+  color: var(--color-rose-300);
+}
+
+/* Keep autofilled inputs on-theme. */
+.auth-input:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-slate-100);
+  caret-color: var(--color-slate-100);
+  box-shadow: 0 0 0 100px #0f172a inset;
+}
+
+/* Brand-gradient focus glow: a 1.5px gradient ring (::before) plus a soft blurred halo (::after). */
+.auth-field::before,
+.auth-field::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.auth-field::before {
+  inset: 0;
+  z-index: 1;
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+.auth-field::after {
+  inset: -3px;
+  z-index: -1;
+  filter: blur(12px);
+}
+.auth-field:focus-within::before {
+  opacity: 1;
+}
+.auth-field:focus-within::after {
+  opacity: 0.35;
+}
+.auth-field:has([data-invalid])::before,
+.auth-field:has([data-invalid])::after {
+  background: linear-gradient(90deg, #f43f5e, #fb7185);
+}
+
+/* ───────────────────────── Password strength ───────────────────────── */
+
+.strength-bar {
+  width: 0;
+  background: var(--color-slate-500);
+  transition:
+    width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 0.4s ease;
+}
+.strength-bar[data-level="1"] {
+  width: 25%;
+  background: var(--color-rose-500);
+}
+.strength-bar[data-level="2"] {
+  width: 50%;
+  background: var(--color-amber-400);
+}
+.strength-bar[data-level="3"] {
+  width: 75%;
+  background: var(--color-emerald-400);
+}
+.strength-bar[data-level="4"] {
+  width: 100%;
+  background: linear-gradient(90deg, #34d399, #22d3ee, #a855f7);
+}
+
+.strength-label[data-level="1"] {
+  color: var(--color-rose-400);
+}
+.strength-label[data-level="2"] {
+  color: var(--color-amber-300);
+}
+.strength-label[data-level="3"] {
+  color: var(--color-emerald-300);
+}
+.strength-label[data-level="4"] {
+  color: var(--color-cyan-300);
+}
+
+.strength-check {
+  color: var(--color-slate-500);
+  transition: color 0.2s ease;
+}
+.strength-check[data-met] {
+  color: var(--color-emerald-300);
+}
+.strength-icon circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  transition: fill 0.2s ease;
+}
+.strength-icon path {
+  fill: none;
+  stroke: var(--color-slate-950);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.strength-check[data-met] .strength-icon circle {
+  fill: currentColor;
+}
+.strength-check[data-met] .strength-icon path {
+  opacity: 1;
+}
+
+/* ───────────────────────── Animations ───────────────────────── */
+
+/* Page fade-in on route change */
+.page-enter {
+  animation: page-enter 0.5s ease-out;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Invalid-submit shake */
+.shake {
+  animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(3px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5px);
+  }
+  40%,
+  60% {
+    transform: translateX(5px);
+  }
+}
+
+/* Toasts */
+.toast {
+  animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.toast-leave {
+  animation: toast-out 0.25s ease-in forwards;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+/* Checkout: success check pop-in */
 .success-check {
   animation: pop-in 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
@@ -36,8 +253,184 @@
   }
 }
 
+/* Auth: success overlay with a drawn checkmark */
+.success-overlay {
+  animation: page-enter 0.3s ease-out;
+}
+.success-draw circle,
+.success-draw path {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.success-draw-circle {
+  stroke: var(--color-emerald-400);
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: draw 0.6s ease-out forwards;
+}
+.success-draw-check {
+  stroke: var(--color-emerald-300);
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: draw 0.35s 0.5s ease-out forwards;
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ───────────────────────── Profile menu ───────────────────────── */
+
+/* Closed menus are invisible (and so skipped by Tab / screen readers). */
+.profile-menu {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.95);
+  transform-origin: top right;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0s linear 0.16s;
+}
+.profile-menu[data-open] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.15),
+    visibility 0s;
+}
+
+/* ───────────────────────── Logout modal ───────────────────────── */
+
+.logout-modal[data-state="open"] .logout-backdrop {
+  animation: fade-in 0.3s ease-out;
+}
+.logout-modal[data-state="open"] .logout-dialog {
+  animation: modal-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.logout-modal[data-state="closing"] .logout-backdrop {
+  animation: fade-out 0.22s ease-in forwards;
+}
+.logout-modal[data-state="closing"] .logout-dialog {
+  animation: modal-out 0.22s ease-in forwards;
+}
+.logout-modal[data-state="leaving"] {
+  animation: fade-out 0.4s ease-in forwards;
+}
+.logout-modal[data-state="leaving"] .logout-dialog {
+  animation: modal-out 0.4s ease-in forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.94);
+  }
+}
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+/* Hold-to-confirm: a light fill sweeps across while held, snaps back on release. */
+.hold-button {
+  --hold-duration: 1s; /* keep in sync with HOLD_MS in logoutModal.ts */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.hold-fill {
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.38));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.25s ease-out;
+}
+.hold-button[data-holding] .hold-fill {
+  transform: scaleX(1);
+  transition: transform var(--hold-duration) linear;
+}
+.hold-button[data-done] .hold-fill {
+  transform: scaleX(1);
+  transition: none;
+}
+
+/* Early release: flash the hint so it's clear the button must be held. */
+.logout-hint.is-nudged {
+  color: var(--color-pink-300);
+  animation: hint-nudge 0.6s ease-out;
+}
+@keyframes hint-nudge {
+  from {
+    color: #fff;
+    text-shadow: 0 0 12px rgb(236 72 153 / 0.8);
+  }
+}
+
+/* Login panel entrance after logging out. */
+.auth-entrance {
+  animation: auth-entrance 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes auth-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .success-check {
+  .profile-menu,
+  .profile-menu[data-open] {
+    transform: none;
+    transition: none;
+  }
+  .logout-modal[data-state="open"] .logout-backdrop,
+  .logout-modal[data-state="open"] .logout-dialog,
+  .logout-modal[data-state="closing"] .logout-backdrop,
+  .logout-modal[data-state="closing"] .logout-dialog,
+  .logout-modal[data-state="leaving"] .logout-dialog {
     animation: none;
+  }
+  /* Reduced motion: no wallet or particles — the modal simply fades. */
+  .logout-modal[data-state="leaving"] {
+    animation-duration: 0.15s;
+  }
+  .auth-entrance {
+    animation-name: fade-in;
+    animation-duration: 0.3s;
+  }
+  .page-enter,
+  .shake,
+  .toast,
+  .toast-leave,
+  .success-check,
+  .success-overlay {
+    animation: none;
+  }
+  .success-draw-circle,
+  .success-draw-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .strength-bar,
+  .auth-label {
+    transition: none;
   }
 }
